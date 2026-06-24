@@ -599,7 +599,7 @@ if(legacyToday>0 && !dailyData[todayIso]){
 
 const state={
   today:parseInt(dailyData[todayIso]||0,10)||0,
-  total:parseInt(localStorage.getItem(KEY_TOTAL)||12847,10)||12847,
+  total:parseInt(localStorage.getItem(KEY_TOTAL)||0,10)||0,
   goal:1000,
   prev:10000,
   next:25000,
