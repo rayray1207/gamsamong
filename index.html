@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>감사카운터</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#1E5044">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="감사몽">
+<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root{
+    --bg:#F6F3EE;
+    --surface:#FFFFFF;
+    --ink:#1D1C1A;
+    --ink-2:#55524C;
+    --mute:#9B968E;
+    --hair:#E5E0D8;
+    --green:#1E5044;
+    --green-2:#2E6B5B;
+    --gold:#B99356;
+    --ease-spring:cubic-bezier(.3,1.4,.4,1);
+    --ease-out:cubic-bezier(.2,.9,.25,1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:'Pretendard Variable',Pretendard,-apple-system,sans-serif;
+    background:#DEDAD3;color:var(--ink);
+    display:flex;align-items:center;justify-content:center;min-height:100vh;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  }
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:'tnum';letter-spacing:-.03em}
+
+  .phone{
+    width:100%;max-width:420px;height:100vh;max-height:920px;
+    background:var(--bg);position:relative;overflow:hidden;
+    display:flex;flex-direction:column;
+  }
+  @media(min-width:480px){
+    .phone{border-radius:40px;height:90vh;box-shadow:0 32px 96px rgba(38,33,26,.28),0 2px 8px rgba(38,33,26,.12)}
+  }
+  .phone::after{
+    content:'';position:absolute;inset:0;pointer-events:none;z-index:50;opacity:.42;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .screen{display:none;flex:1;min-height:0;flex-direction:column;overflow-y:auto;scrollbar-width:none}
+  .screen::-webkit-scrollbar{display:none}
+  .screen.active{display:flex;animation:enter .3s var(--ease-out)}
+  @keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  .pad{padding:max(24px,env(safe-area-inset-top)) 24px 108px}
+  .ovl{font-size:10.5px;font-weight:600;letter-spacing:.16em;color:var(--mute)}
+
+  /* ─── TOP BAR ─── */
+  .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px}
+  .top .date{font-size:13px;font-weight:600;color:var(--ink-2)}
+  .top .streak{font-size:12.5px;font-weight:600;color:var(--green);display:flex;align-items:center;gap:6px}
+  .top .streak::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(30,80,68,.13)}
+
+  /* ─── CHARACTER ZONE ─── */
+  .char-zone{
+    display:flex;align-items:center;gap:14px;
+    margin-bottom:20px;
+    padding:14px 16px;
+    background:rgba(30,80,68,.055);
+    border-radius:20px;
+  }
+  .char-img-box{
+    width:60px;height:60px;flex-shrink:0;position:relative;
+  }
+  .char-img-box img{
+    width:100%;height:100%;object-fit:contain;display:block;
+    transition:transform .45s var(--ease-spring);
+  }
+  .char-img-box img[src=""]{display:none}
+  .char-img-box img[src=""] + svg{display:block}
+  .char-img-box svg{
+    display:none;width:100%;height:100%;
+    transition:transform .45s var(--ease-spring);
+  }
+  .char-img-box.pop img,
+  .char-img-box.pop svg{transform:scale(1.18) translateY(-4px)}
+  .char-right{flex:1;min-width:0}
+  .char-name{font-size:10.5px;font-weight:700;letter-spacing:.1em;color:var(--green);margin-bottom:5px}
+  .char-msg{
+    font-size:13.5px;font-weight:500;color:var(--ink);line-height:1.55;
+    transition:opacity .22s ease;
+  }
+  .char-msg.fade{opacity:0}
+
+  /* ─── DIAL ─── */
+  .dial-zone{display:flex;flex-direction:column;align-items:center;margin-bottom:22px}
+  .dial{
+    position:relative;width:258px;height:258px;cursor:pointer;
+    user-select:none;-webkit-user-select:none;
+    transition:transform .2s var(--ease-spring);touch-action:manipulation;
+  }
+  .dial.pressed{transform:scale(.968)}
+  .dial svg{width:100%;height:100%;display:block}
+  .tick{stroke:#DAD5CB;stroke-linecap:round;transition:stroke .4s ease}
+  .tick.on{stroke:var(--green)}
+  .tick.gold{stroke:var(--gold)}
+  .dial-pulse{
+    position:absolute;left:50%;top:50%;width:186px;height:186px;border-radius:50%;
+    transform:translate(-50%,-50%) scale(.6);opacity:0;pointer-events:none;
+    background:radial-gradient(closest-side,rgba(30,80,68,.10),transparent 70%);
+  }
+  .dial-pulse.go{animation:pulse .48s var(--ease-out)}
+  @keyframes pulse{0%{opacity:1;transform:translate(-50%,-50%) scale(.55)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.05)}}
+  .dial-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+  .dial-center .cap{font-size:11px;font-weight:600;letter-spacing:.2em;color:var(--mute);margin-bottom:10px;transition:color .4s}
+  .dial-center .cap.gold{color:var(--gold)}
+
+  .odo{display:flex;height:64px;overflow:hidden;font-size:64px;font-weight:600;line-height:1;letter-spacing:-.045em;font-variant-numeric:tabular-nums;font-feature-settings:'tnum'}
+  .odo .sep{height:64px;display:flex;align-items:flex-start}
+  .odo .ch{height:64px}
+  .odo .ch .col{display:flex;flex-direction:column;transition:transform .48s var(--ease-out)}
+  .odo .ch .col span{height:64px;display:block}
+
+  .dial-center .of{margin-top:10px;font-size:12px;font-weight:500;color:var(--mute)}
+  .dial-center .of b{color:var(--ink-2);font-weight:600}
+  .dial-center .of.done{color:var(--gold);font-weight:600}
+  .dial-hint{margin-top:13px;font-size:12px;font-weight:500;color:var(--mute)}
+  .dial-hint em{font-style:normal;color:var(--ink-2);font-weight:600}
+
+  /* ─── CONTROLS ─── */
+  .controls{display:flex;gap:9px;margin-bottom:28px}
+  .controls button{
+    flex:1;font-family:inherit;cursor:pointer;
+    font-size:14.5px;font-weight:600;
+    padding:14px 0;border-radius:999px;
+    background:transparent;color:var(--ink);
+    border:1px solid #D3CEC4;
+    transition:transform .18s var(--ease-spring),background .15s;
+    font-variant-numeric:tabular-nums;
+  }
+  .controls button:active{transform:scale(.94);background:#EDE9E1}
+  .controls button.primary{background:var(--green);border-color:var(--green);color:#F3F1EA}
+  .controls button.primary:active{background:#164137}
+  .direct{display:none;gap:9px;margin-bottom:28px}
+  .direct.open{display:flex}
+  .direct input{
+    flex:1;font-family:inherit;font-size:16px;font-weight:600;
+    border:1px solid #D3CEC4;border-radius:999px;padding:13px 20px;
+    background:var(--surface);color:var(--ink);font-variant-numeric:tabular-nums;
+  }
+  .direct input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(30,80,68,.1)}
+  .direct button{
+    font-family:inherit;font-size:14.5px;font-weight:600;cursor:pointer;
+    border:none;border-radius:999px;padding:0 24px;
+    background:var(--green);color:#F3F1EA;
+  }
+
+  /* ─── DATA SECTIONS ─── */
+  .section{border-top:1px solid var(--hair);padding-top:18px;margin-bottom:24px}
+  .section-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+  .cume{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px}
+  .cume .big{font-size:36px;font-weight:600;line-height:1}
+  .cume .nxt{text-align:right;font-size:11px;font-weight:500;color:var(--mute);line-height:1.65}
+  .cume .nxt b{color:var(--green);font-weight:600}
+  .meter{position:relative;height:3px;background:#E0DBD1;border-radius:2px}
+  .meter i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--green-2),var(--green));border-radius:2px;transition:width .9s var(--ease-out)}
+  .meter .mark{
+    position:absolute;top:50%;transform:translate(-50%,-50%);
+    width:10px;height:10px;border-radius:50%;background:var(--green);
+    border:2.5px solid var(--bg);box-shadow:0 1px 4px rgba(30,80,68,.4);
+    transition:left .9s var(--ease-out);
+  }
+  .meter-cap{display:flex;justify-content:space-between;margin-top:8px;font-size:10px;font-weight:500;color:var(--mute)}
+
+  .spark{display:flex;align-items:flex-end;gap:6px;height:54px;margin-top:6px}
+  .spark .bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+  .spark .bar i{width:100%;border-radius:4px;background:#DAD5CB;min-height:3px;transition:height .7s var(--ease-out),background .3s}
+  .spark .bar.hi i{background:var(--green)}
+  .spark .bar.today i{background:var(--gold)}
+  .spark .bar span{font-size:9.5px;font-weight:600;color:var(--mute);letter-spacing:.02em}
+  .spark .bar.today span{color:var(--gold);font-weight:700}
+  .inline-stats{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--hair);margin-top:20px}
+  .inline-stats div{padding:14px 0 0}
+  .inline-stats div+div{padding-left:16px;border-left:1px solid var(--hair)}
+  .inline-stats b{display:block;font-size:19px;font-weight:600;margin-bottom:3px}
+  .inline-stats span{font-size:10.5px;font-weight:500;color:var(--mute)}
+
+  /* ─── SUB SCREENS ─── */
+  .h1{font-size:24px;font-weight:700;letter-spacing:-.03em;margin:2px 0 26px}
+  .h1 small{display:block;font-size:12.5px;font-weight:500;color:var(--mute);letter-spacing:0;margin-top:6px}
+
+  /* ─── CALENDAR ─── */
+  .cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+  .cal-head b{font-size:15.5px;font-weight:600}
+  .cal-head .nav-btns{display:flex;gap:6px}
+  .cal-head button{
+    width:34px;height:34px;border-radius:50%;border:1px solid #D3CEC4;background:transparent;
+    color:var(--ink-2);cursor:pointer;font-size:16px;line-height:1;
+    transition:transform .15s var(--ease-spring),background .15s;
+  }
+  .cal-head button:active{transform:scale(.88);background:#EDE9E1}
+  .cal-head button:disabled{opacity:.26;cursor:default}
+  .dow{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:10px}
+  .dow span{text-align:center;font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--mute)}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .day{
+    aspect-ratio:1;border-radius:10px;background:#EDE9E2;
+    display:flex;align-items:center;justify-content:center;position:relative;
+    cursor:pointer;transition:transform .15s var(--ease-spring);
+    animation:dayin .38s var(--ease-out) backwards;
+  }
+  .day:active{transform:scale(.88)}
+  @keyframes dayin{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:none}}
+  .day .n{font-size:12px;font-weight:600;color:#B2ACA1}
+  .day.l1{background:#D3E2DA}.day.l1 .n{color:#3F6B5D}
+  .day.l2{background:#9CBBAF}.day.l2 .n{color:#1B4135}
+  .day.l3{background:var(--green)}.day.l3 .n{color:#E7EFEA}
+  .day.sel{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--green)}
+  .day.today::after{content:'';position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:3.5px;height:3.5px;border-radius:50%;background:var(--gold)}
+  .day.blank{background:transparent;cursor:default;animation:none}
+  .cal-foot{display:flex;justify-content:flex-end;margin-top:14px}
+  .scale{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:500;color:var(--mute)}
+  .scale i{width:10px;height:10px;border-radius:3px}
+  .day-detail{margin-top:22px;border-top:1px solid var(--hair);padding-top:16px;display:flex;justify-content:space-between;align-items:baseline}
+  .day-detail .d{font-size:13px;font-weight:600;color:var(--ink-2)}
+  .day-detail .v{font-size:25px;font-weight:600}
+  .day-detail .v small{font-size:12px;font-weight:500;color:var(--mute);margin-left:4px}
+  .cal-rows{margin-top:12px}
+  .cal-rows .row{display:flex;justify-content:space-between;padding:8px 0;font-size:13px;border-top:1px solid var(--hair)}
+  .cal-rows .row:first-child{border-top:none}
+  .cal-rows .row span{color:var(--mute);font-weight:500}
+  .cal-rows .row b{font-weight:600}
+
+  /* ─── STATS ─── */
+  .stat-hero{margin-bottom:24px}
+  .stat-hero .big{font-size:52px;font-weight:600;line-height:1.05}
+  .stat-hero .cap{margin-top:8px;font-size:12px;font-weight:500;color:var(--mute)}
+  .stat-hero .cap b{color:var(--green);font-weight:600}
+  .chart-wrap{margin-bottom:30px}
+  .chart-wrap svg{width:100%;display:block}
+  .chart-area{fill:url(#areaGrad)}
+  .chart-line{fill:none;stroke:var(--green);stroke-width:2;stroke-linecap:round}
+  .chart-dot{fill:var(--green);stroke:var(--bg);stroke-width:2.5}
+  .chart-cap{display:flex;justify-content:space-between;margin-top:7px;font-size:10px;font-weight:500;color:var(--mute)}
+  .journey{position:relative;padding-left:26px}
+  .journey::before{content:'';position:absolute;left:5px;top:16px;bottom:16px;width:1.5px;background:var(--hair)}
+  .journey .seg{position:absolute;left:5px;top:16px;width:1.5px;background:var(--green);height:0;transition:height 1s var(--ease-out) .15s}
+  .jnode{position:relative;padding:12px 0;display:flex;justify-content:space-between;align-items:center}
+  .jnode::before{content:'';position:absolute;left:-26px;top:50%;transform:translate(-50%,-50%);width:11px;height:11px;border-radius:50%;background:var(--bg);border:1.5px solid #C7C1B6;transition:all .3s}
+  .jnode.done::before{background:var(--green);border-color:var(--green)}
+  .jnode.now::before{background:var(--bg);border:2px solid var(--green);box-shadow:0 0 0 4px rgba(30,80,68,.1)}
+  .jnode .nm{font-size:14.5px;font-weight:600;color:#B2ACA1}
+  .jnode.done .nm,.jnode.now .nm{color:var(--ink)}
+  .jnode .nm small{display:block;font-size:11px;font-weight:500;color:var(--mute);margin-top:2px;letter-spacing:0}
+  .jnode .st{font-size:10.5px;font-weight:600;letter-spacing:.08em;color:#C7C1B6}
+  .jnode.done .st{color:var(--green)}
+  .jnode.now .st{color:var(--gold)}
+
+  /* ─── STORY ─── */
+  .story-char-card{
+    display:flex;align-items:center;gap:16px;
+    padding:16px 18px;background:rgba(30,80,68,.055);border-radius:18px;
+    margin-bottom:28px;
+  }
+  .story-char-card .char-img-box{width:52px;height:52px}
+  .story-char-card .char-img-box img[src=""]{display:none}
+  .story-char-card .char-img-box img[src=""] + svg{display:block}
+  .story-char-card .char-img-box svg{display:none;width:100%;height:100%}
+  .story-char-text b{display:block;font-size:10.5px;font-weight:700;letter-spacing:.1em;color:var(--green);margin-bottom:5px}
+  .story-char-text p{font-size:13.5px;font-weight:500;color:var(--ink);line-height:1.7}
+  .story-open{font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.5;margin-bottom:22px;word-break:keep-all}
+  .story-open em{font-style:normal;color:var(--green)}
+  .story p{font-size:14px;line-height:1.95;color:var(--ink-2);font-weight:400;margin-bottom:18px;word-break:keep-all}
+  .pull{margin:24px 0;padding:20px 0;border-top:1.5px solid var(--ink);border-bottom:1px solid var(--hair)}
+  .pull .q{font-size:15.5px;font-weight:600;line-height:1.8;word-break:keep-all}
+  .pull .by{margin-top:12px;font-size:11px;font-weight:500;color:var(--mute)}
+  .foot-note{margin-top:24px;padding-top:14px;border-top:1px solid var(--hair);font-size:10.5px;line-height:1.8;color:var(--mute)}
+
+  /* ─── CELEBRATE ─── */
+  .celebrate{position:absolute;inset:0;z-index:60;display:none;align-items:flex-end;background:rgba(29,28,26,.38);backdrop-filter:blur(4px)}
+  .celebrate.show{display:flex}
+  .sheet{
+    width:100%;background:var(--bg);border-radius:26px 26px 0 0;
+    padding:36px 28px calc(32px + env(safe-area-inset-bottom));text-align:center;
+    animation:sheet .48s var(--ease-spring);position:relative;overflow:hidden;
+  }
+  @keyframes sheet{from{transform:translateY(100%)}to{transform:none}}
+  .sheet::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+  .sheet-char{width:76px;height:76px;margin:0 auto 18px}
+  .sheet-char img{width:100%;height:100%;object-fit:contain;display:block}
+  .sheet-char img[src=""]{display:none}
+  .sheet-char img[src=""] + svg{display:block}
+  .sheet-char svg{display:none;width:100%;height:100%}
+  .sheet .ovl{display:block;margin-bottom:12px;color:var(--gold)}
+  .sheet h2{font-size:22px;font-weight:700;letter-spacing:-.02em}
+  .sheet .n{font-size:44px;font-weight:600;color:var(--green);margin:10px 0 12px}
+  .sheet p{font-size:13px;color:var(--ink-2);line-height:1.85;margin-bottom:26px;word-break:keep-all}
+  .sheet button{
+    width:100%;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;
+    border:none;border-radius:999px;padding:16px;background:var(--green);color:#F3F1EA;
+    transition:transform .15s var(--ease-spring);
+  }
+  .sheet button:active{transform:scale(.97)}
+
+  /* ─── NAV ─── */
+  nav{
+    position:absolute;left:0;right:0;bottom:0;z-index:55;
+    background:rgba(246,243,238,.9);backdrop-filter:blur(24px) saturate(1.4);
+    border-top:1px solid var(--hair);
+    display:grid;grid-template-columns:repeat(4,1fr);
+    padding:9px 8px calc(12px + env(safe-area-inset-bottom,6px));
+  }
+  nav button{
+    border:none;background:none;cursor:pointer;font-family:inherit;
+    font-size:9.5px;font-weight:600;letter-spacing:.05em;color:#B2ACA1;
+    display:flex;flex-direction:column;align-items:center;gap:5px;
+    transition:color .2s,transform .18s var(--ease-spring);
+  }
+  nav button:active{transform:scale(.9)}
+  nav button svg{width:21px;height:21px;fill:none;stroke:#B2ACA1;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;transition:stroke .2s}
+  nav button.on{color:var(--green)}
+  nav button.on svg{stroke:var(--green)}
+</style>
+</head>
+<body>
+<div class="phone">
+
+<!-- ══════ 홈 ══════ -->
+<section class="screen active" id="home">
+  <div class="pad">
+    <div class="top">
+      <span class="date" id="homeDate"></span>
+      <span class="streak" id="homeStreak">0일 연속</span>
+    </div>
+
+    <!-- 감사몽 카드 -->
+    <div class="char-zone">
+      <div class="char-img-box" id="charBox">
+        <img src="" data-gamsa-img="1" alt="감사몽">
+        <svg viewBox="0 0 72 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M36 24C28 13 13 15 11 25C9 35 22 41 36 33Z" fill="#2A6652"/>
+          <path d="M36 24C44 13 59 15 61 25C63 35 50 41 36 33Z" fill="#1E5044"/>
+          <line x1="36" y1="24" x2="36" y2="41" stroke="#1E5044" stroke-width="2.5" stroke-linecap="round"/>
+          <ellipse cx="36" cy="65" rx="26" ry="23" fill="#2A6652"/>
+          <ellipse cx="28" cy="55" rx="6" ry="8.5" fill="rgba(255,255,255,0.09)" transform="rotate(-18 28 55)"/>
+          <circle cx="27" cy="63" r="3.2" fill="#E8F2EE"/>
+          <circle cx="28.2" cy="62.2" r="1.3" fill="#1A4B3E"/>
+          <circle cx="45" cy="63" r="3.2" fill="#E8F2EE"/>
+          <circle cx="46.2" cy="62.2" r="1.3" fill="#1A4B3E"/>
+          <path d="M28 71Q36 77 44 71" stroke="#E8F2EE" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+          <circle cx="20" cy="69" r="4" fill="rgba(255,165,110,0.2)"/>
+          <circle cx="52" cy="69" r="4" fill="rgba(255,165,110,0.2)"/>
+        </svg>
+      </div>
+      <div class="char-right">
+        <div class="char-name">감사몽</div>
+        <div class="char-msg" id="charMsg">오늘도 감사를 쌓아볼까요</div>
+      </div>
+    </div>
+
+    <!-- 다이얼 -->
+    <div class="dial-zone">
+      <div class="dial" id="dial" role="button" aria-label="탭하면 감사 1회">
+        <svg viewBox="0 0 258 258" id="dialSvg"></svg>
+        <div class="dial-pulse" id="dialPulse"></div>
+        <div class="dial-center">
+          <span class="cap" id="dialCap">오늘의 감사</span>
+          <div class="odo num" id="todayOdo" aria-live="polite"></div>
+          <span class="of" id="goalLine">하루 목표 <b>1,000</b></span>
+        </div>
+      </div>
+      <div class="dial-hint">탭 한 번에 1회 · <em>길게 누르면 연속</em>으로 쌓입니다</div>
+    </div>
+
+    <div class="controls" id="ctl">
+      <button class="primary" id="a10">+10</button>
+      <button class="primary" id="a100">+100</button>
+      <button id="aDirect">직접 입력</button>
+    </div>
+    <div class="direct" id="directBox">
+      <input type="number" inputmode="numeric" min="1" id="directVal" placeholder="횟수">
+      <button id="directAdd">더하기</button>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <span class="ovl">전체 누적</span>
+        <span class="ovl" style="color:var(--gold)" id="nextLabel">다음 — 첫 번째 전환점</span>
+      </div>
+      <div class="cume">
+        <span class="big num" id="totalVal">0</span>
+        <span class="nxt"><b id="remainVal">—</b> 남음<br>25,000까지</span>
+      </div>
+      <div class="meter">
+        <i id="meterFill"></i>
+        <span class="mark" id="meterMark"></span>
+      </div>
+      <div class="meter-cap num"><span id="meterFrom">10,000</span><span id="meterTo">25,000</span></div>
+    </div>
+
+    <div class="section" style="margin-bottom:0">
+      <div class="section-head">
+        <span class="ovl">최근 7일</span>
+        <span class="ovl num" id="weekSum"></span>
+      </div>
+      <div class="spark" id="spark"></div>
+      <div class="inline-stats">
+        <div><b class="num">8,420</b><span>이번 달</span></div>
+        <div><b class="num">41일</b><span>연속 기록</span></div>
+        <div><b class="num">1,250</b><span>하루 최고</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════ 기록 ══════ -->
+<section class="screen" id="calendar">
+  <div class="pad">
+    <div class="h1">기록<small>날마다 쌓인 감사의 깊이</small></div>
+    <div class="cal-head">
+      <b class="num" id="calTitle">2026년 6월</b>
+      <div class="nav-btns">
+        <button id="calPrev" aria-label="이전 달">‹</button>
+        <button id="calNext" aria-label="다음 달" disabled>›</button>
+      </div>
+    </div>
+    <div class="dow"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+    <div class="cal" id="calGrid"></div>
+    <div class="cal-foot">
+      <span class="scale">
+        0
+        <i style="background:#EDE9E2"></i>
+        <i style="background:#D3E2DA"></i>
+        <i style="background:#9CBBAF"></i>
+        <i style="background:var(--green)"></i>
+        1,000+
+      </span>
+    </div>
+    <div class="day-detail">
+      <span class="d" id="selDate">6월 22일 · 오늘</span>
+      <span class="v num" id="selVal">320<small>회</small></span>
+    </div>
+    <div class="cal-rows" id="calRows"></div>
+  </div>
+</section>
+
+<!-- ══════ 통계 ══════ -->
+<section class="screen" id="stats">
+  <div class="pad">
+    <div class="h1">여정<small>10만 번을 향한 일곱 개의 이정표</small></div>
+    <div class="stat-hero">
+      <div class="big num" id="statTotal">12,847</div>
+      <div class="cap">지금까지 쌓은 감사 · 다음 이정표까지 <b class="num" id="statRemain">12,153번</b></div>
+    </div>
+    <div class="chart-wrap">
+      <div class="section-head" style="margin-bottom:10px">
+        <span class="ovl">최근 30일 누적 추이</span>
+      </div>
+      <svg id="chartSvg" viewBox="0 0 340 110" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1E5044" stop-opacity=".16"/>
+            <stop offset="100%" stop-color="#1E5044" stop-opacity=".02"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="chart-cap"><span>30일 전</span><span>오늘</span></div>
+    </div>
+    <div class="section-head"><span class="ovl">이정표</span></div>
+    <div class="journey" id="journey">
+      <div class="seg" id="journeySeg"></div>
+      <div class="jnode done"><div class="nm">첫 감사의 씨앗<small>1번 달성</small></div><span class="st">DONE</span></div>
+      <div class="jnode done"><div class="nm">새싹이 돋다<small>1,000번 달성</small></div><span class="st">DONE</span></div>
+      <div class="jnode done"><div class="nm">뿌리가 내리다<small>5,000번 달성</small></div><span class="st">DONE</span></div>
+      <div class="jnode now"><div class="nm">잎이 펼쳐지다<small>25,000번 달성</small></div><span class="st">NOW</span></div>
+      <div class="jnode"><div class="nm">꽃이 피다<small>50,000번 달성</small></div><span class="st"></span></div>
+      <div class="jnode"><div class="nm">열매를 맺다<small>75,000번 달성</small></div><span class="st"></span></div>
+      <div class="jnode"><div class="nm">씨앗을 나누다<small>100,000번 달성</small></div><span class="st"></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════ 이야기 ══════ -->
+<section class="screen" id="story">
+  <div class="pad">
+    <div class="h1">이야기<small>감사몽과 함께한 시간들</small></div>
+
+    <div class="story-char-card">
+      <div class="char-img-box">
+        <img src="" data-gamsa-img="1" alt="감사몽">
+        <svg viewBox="0 0 72 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M36 24C28 13 13 15 11 25C9 35 22 41 36 33Z" fill="#2A6652"/>
+          <path d="M36 24C44 13 59 15 61 25C63 35 50 41 36 33Z" fill="#1E5044"/>
+          <line x1="36" y1="24" x2="36" y2="41" stroke="#1E5044" stroke-width="2.5" stroke-linecap="round"/>
+          <ellipse cx="36" cy="65" rx="26" ry="23" fill="#2A6652"/>
+          <ellipse cx="28" cy="55" rx="6" ry="8.5" fill="rgba(255,255,255,0.09)" transform="rotate(-18 28 55)"/>
+          <circle cx="27" cy="63" r="3.2" fill="#E8F2EE"/><circle cx="28.2" cy="62.2" r="1.3" fill="#1A4B3E"/>
+          <circle cx="45" cy="63" r="3.2" fill="#E8F2EE"/><circle cx="46.2" cy="62.2" r="1.3" fill="#1A4B3E"/>
+          <path d="M28 71Q36 77 44 71" stroke="#E8F2EE" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+          <circle cx="20" cy="69" r="4" fill="rgba(255,165,110,0.2)"/>
+          <circle cx="52" cy="69" r="4" fill="rgba(255,165,110,0.2)"/>
+        </svg>
+      </div>
+      <div class="story-char-text">
+        <b>감사몽의 한마디</b>
+        <p>오늘의 작은 한마디가<br>마음을 조금씩 바꿔줘.</p>
+      </div>
+    </div>
+
+    <p class="story-open">쓰지 않습니다.<br>말하고, <em>셉니다.</em></p>
+    <div class="story">
+      <p>이 앱은 감사일기가 아닙니다. "감사합니다"라는 한마디를 오늘 몇 번 말했는지 세고, 그 숫자를 매일 쌓아가는 단순한 도구입니다.</p>
+      <p>감사는 거창한 기록이 아니라, 하루 속에서 반복해 꺼내는 작은 말에서 시작됩니다.</p>
+      <div class="pull">
+        <p class="q">"감사합니다"를 합계 2만5천번 말하면 마음에 변화가 찾아오고,<br>5만번을 넘기면 새로운 시작이 기다립니다.</p>
+        <p class="by">고바야시 세이칸<br>《인생을 바꾸는 데는 단 하루도 걸리지 않는다》</p>
+      </div>
+      <p>하루 1,000번씩, 매일 같은 말을 반복하는 것. 중요한 것은 숫자가 아니라 그 꾸준함입니다.</p>
+      <p>오늘 몇 번이든 괜찮습니다. 어제의 나보다 한 번만 더.</p>
+    </div>
+    <div class="foot-note">이 앱은 개인의 습관 기록을 돕는 도구이며, 특정한 효과를 보장하거나 의학적 효능을 주장하지 않습니다.</div>
+  </div>
+</section>
+
+<!-- ══════ 축하 시트 ══════ -->
+<div class="celebrate" id="celebrate">
+  <div class="sheet">
+    <div class="sheet-char">
+      <img src="" data-gamsa-img="1" alt="감사몽">
+      <svg viewBox="0 0 72 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M36 24C28 13 13 15 11 25C9 35 22 41 36 33Z" fill="#2A6652"/>
+        <path d="M36 24C44 13 59 15 61 25C63 35 50 41 36 33Z" fill="#1E5044"/>
+        <line x1="36" y1="24" x2="36" y2="41" stroke="#1E5044" stroke-width="2.5" stroke-linecap="round"/>
+        <ellipse cx="36" cy="65" rx="26" ry="23" fill="#2A6652"/>
+        <ellipse cx="28" cy="55" rx="6" ry="8.5" fill="rgba(255,255,255,0.09)" transform="rotate(-18 28 55)"/>
+        <circle cx="27" cy="63" r="3.2" fill="#E8F2EE"/><circle cx="28.2" cy="62.2" r="1.3" fill="#1A4B3E"/>
+        <circle cx="45" cy="63" r="3.2" fill="#E8F2EE"/><circle cx="46.2" cy="62.2" r="1.3" fill="#1A4B3E"/>
+        <path d="M28 71Q36 77 44 71" stroke="#E8F2EE" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+        <circle cx="20" cy="69" r="4" fill="rgba(255,165,110,0.2)"/>
+        <circle cx="52" cy="69" r="4" fill="rgba(255,165,110,0.2)"/>
+      </svg>
+    </div>
+    <span class="ovl">MILESTONE</span>
+    <h2>첫 번째 전환점</h2>
+    <div class="n num">25,000</div>
+    <p>감사 2만 5천 번이 쌓였어요.<br>감사몽도 함께 자라고 있어요. 정말 대단해요.</p>
+    <button id="celebClose">계속 쌓기</button>
+  </div>
+</div>
+
+<!-- ══════ 탭바 ══════ -->
+<nav>
+  <button class="on" data-screen="home">
+    <svg viewBox="0 0 24 24"><path d="M3 11 12 3l9 8v10H5V11Z"/></svg>홈
+  </button>
+  <button data-screen="calendar">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>기록
+  </button>
+  <button data-screen="stats">
+    <svg viewBox="0 0 24 24"><path d="M5 20V12M12 20V5M19 20V9"/></svg>통계
+  </button>
+  <button data-screen="story">
+    <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>이야기
+  </button>
+</nav>
+
+</div>
+
+<script>
+/* ════════════════ INIT ════════════════ */
+const NS='http://www.w3.org/2000/svg';
+const reduced=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+const fmt=n=>n.toLocaleString('ko-KR');
+
+const KEY_TODAY='gamsa-today-v3-';
+const KEY_TOTAL='gamsa-total-v3';
+const KEY_DAILY='gamsa-daily-v3';
+const now=new Date();
+const todayKey=now.toDateString();
+const todayIso=toISODate(now);
+
+function pad2(n){return String(n).padStart(2,'0');}
+function toISODate(d){return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;}
+function getDateOffset(days){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()+days);return d;}
+function loadDailyData(){
+  try{return JSON.parse(localStorage.getItem(KEY_DAILY)||'{}')||{};}
+  catch(e){return {};}
+}
+function saveDailyData(){
+  localStorage.setItem(KEY_DAILY,JSON.stringify(dailyData));
+}
+
+let dailyData=loadDailyData();
+const legacyToday=parseInt(localStorage.getItem(KEY_TODAY+todayKey)||0,10)||0;
+if(legacyToday>0 && !dailyData[todayIso]){
+  dailyData[todayIso]=legacyToday;
+  saveDailyData();
+}
+
+const state={
+  today:parseInt(dailyData[todayIso]||0,10)||0,
+  total:parseInt(localStorage.getItem(KEY_TOTAL)||12847,10)||12847,
+  goal:1000,
+  prev:10000,
+  next:25000,
+};
+
+/* ════════════════ TABS ════════════════ */
+const screens=document.querySelectorAll('.screen');
+const navBtns=document.querySelectorAll('nav button');
+navBtns.forEach(b=>b.addEventListener('click',()=>{
+  const id=b.dataset.screen;
+  screens.forEach(s=>s.classList.toggle('active',s.id===id));
+  navBtns.forEach(n=>n.classList.toggle('on',n.dataset.screen===id));
+  if(id==='stats')setTimeout(animateJourney,80);
+}));
+
+/* ════════════════ CHARACTER ════════════════ */
+const charMsg=document.getElementById('charMsg');
+const charBox=document.getElementById('charBox');
+const gamsaLines=[
+'오늘도 감사를 쌓아볼까요',
+'감사는 습관이 되어요',
+'작은 것부터 시작해요',
+'오늘도 잘 하고 있어요',
+'충분히 잘하고 있어요',
+'천천히 가도 괜찮아요',
+'지금도 성장하고 있어요',
+'오늘 하루도 고마워요',
+'좋은 일이 기다리고 있어요',
+'마음에 햇살을 담아봐요',
+'지금 이 순간도 선물이에요',
+'행복은 가까이에 있어요',
+'작은 감사도 소중해요',
+'오늘도 의미 있는 하루예요',
+'따뜻한 마음이 자라고 있어요',
+'웃을 이유를 하나 찾아봐요',
+'오늘도 빛나고 있어요',
+'당신을 응원하고 있어요',
+'오늘도 한 걸음 나아갔어요',
+'평범한 하루도 특별해요',
+'좋은 생각이 좋은 하루를 만들어요',
+'감사는 늘 곁에 있어요',
+'오늘의 미소를 기억해요',
+'마음의 정원에 물을 주세요',
+'당신의 속도를 믿어요',
+'작은 행복을 발견해봐요',
+'오늘도 충분히 괜찮아요',
+'지금 이대로도 좋아요',
+'마음이 한결 가벼워질 거예요',
+'따뜻함을 잊지 말아요',
+'좋은 하루가 되고 있어요',
+'감사할 일이 또 생길 거예요',
+'당신은 생각보다 강해요',
+'오늘도 스스로를 아껴주세요',
+'작은 변화가 쌓이고 있어요',
+'마음이 자라는 중이에요',
+'오늘도 용기 냈네요',
+'잘 버텨주고 있어요',
+'지금도 충분히 가치 있어요',
+'오늘의 나를 칭찬해요',
+'기대해도 괜찮아요',
+'좋은 순간이 다가오고 있어요',
+'행복은 생각보다 가까워요',
+'오늘도 새로운 시작이에요',
+'감사는 행복의 씨앗이에요',
+'마음이 향하는 곳을 바라봐요',
+'작은 기쁨을 모아봐요',
+'좋은 일은 천천히 찾아와요',
+'오늘도 소중한 하루예요',
+'당신은 혼자가 아니에요',
+'스스로를 믿어봐요',
+'오늘도 아름다운 하루예요',
+'지금 이 순간을 즐겨봐요',
+'좋은 기운이 머물고 있어요',
+'행복은 이미 시작되었어요',
+'감사는 마음을 풍요롭게 해요',
+'당신의 하루를 응원해요',
+'오늘도 잘 선택하고 있어요',
+'작은 친절이 세상을 바꿔요',
+'좋은 일은 반복돼요',
+'오늘도 배우고 있어요',
+'마음이 조금씩 밝아져요',
+'당신은 충분히 소중해요',
+'웃음이 찾아오는 하루예요',
+'오늘도 가능성은 열려 있어요',
+'한 걸음이면 충분해요',
+'오늘의 기적을 찾아봐요',
+'감사는 마음의 선물이에요',
+'행복은 지금 여기에 있어요',
+'오늘도 괜찮은 날이에요',
+'당신의 노력은 사라지지 않아요',
+'좋은 변화가 시작되고 있어요',
+'오늘도 성장의 씨앗을 심어요',
+'감사는 마음의 근육이에요',
+'오늘도 희망이 있어요',
+'스스로를 믿는 하루예요',
+'작은 용기가 큰 힘이 돼요',
+'오늘도 웃어봐요',
+'마음속 빛을 기억해요',
+'좋은 사람들과 함께하고 있어요',
+'오늘도 감사할 이유가 있어요',
+'행복은 발견하는 거예요',
+'지금 이 순간이 가장 소중해요',
+'오늘도 따뜻한 하루예요',
+'당신은 잘 해내고 있어요',
+'기쁜 일은 또 찾아와요',
+'마음이 가는 길을 믿어요',
+'오늘도 행복을 연습해요',
+'감사는 삶을 빛나게 해요',
+'당신의 하루를 축복해요',
+'오늘도 좋은 에너지가 가득해요',
+'작은 감사가 큰 변화를 만들어요',
+'당신의 미소가 세상을 밝혀요',
+'오늘도 사랑받고 있어요',
+'마음의 여유를 가져봐요',
+'좋은 하루는 이미 시작됐어요',
+'오늘도 스스로를 믿어요',
+'행복은 작은 순간에 있어요',
+'감사는 현재를 선물로 만들어요',
+'오늘도 함께 걸어가요'
+];
+
+let lastMsg='';
+
+function getRandomMsg(){
+  let msg;
+  do{
+    msg=gamsaLines[Math.floor(Math.random()*gamsaLines.length)];
+  }while(msg===lastMsg && gamsaLines.length>1);
+
+  lastMsg=msg;
+  return msg;
+}
+
+function setCharMsg(text){
+  charMsg.classList.add('fade');
+  setTimeout(()=>{charMsg.textContent=text;charMsg.classList.remove('fade');},200);
+}
+function charPop(){
+  charBox.classList.remove('pop');
+  void charBox.offsetWidth;
+  charBox.classList.add('pop');
+  setTimeout(()=>charBox.classList.remove('pop'),480);
+}
+function pickTapMsg(){
+  return getRandomMsg();
+}
+setInterval(()=>{
+  if(state.today===0){
+    setCharMsg(getRandomMsg());
+  }
+},5000);
+
+/* ════════════════ ODOMETER ════════════════ */
+const odoEl=document.getElementById('todayOdo');
+function buildOdo(str){
+  odoEl.innerHTML='';
+  for(const ch of str){
+    if(ch===','){const s=document.createElement('div');s.className='sep';s.textContent=',';odoEl.appendChild(s);}
+    else{
+      const d=document.createElement('div');d.className='ch';
+      const col=document.createElement('div');col.className='col';
+     for(let i=0;i<=9;i++){
+  const s=document.createElement('span');
+  s.textContent=i;
+  col.appendChild(s);
+}
+      d.appendChild(col);odoEl.appendChild(d);
+    }
+  }
+}
+function setOdo(n){
+  const str=fmt(n);
+  if([...odoEl.querySelectorAll('.ch')].length!==([...str].filter(c=>c!==',').length))buildOdo(str);
+  const digits=[...odoEl.querySelectorAll('.ch')];
+  const chars=[...str].filter(c=>c!==',');
+  digits.forEach((d,i)=>{
+    const col=d.querySelector('.col');
+    const v=parseInt(chars[i]||'0');
+    col.style.transform=`translateY(${v*-64}px)`;
+  });
+}
+function tween(el,from,to,dur){
+  const start=performance.now();
+  (function step(now){
+    const t=Math.min((now-start)/dur,1);
+    const e=1-Math.pow(1-t,3);
+    el.textContent=fmt(Math.round(from+(to-from)*e));
+    if(t<1)requestAnimationFrame(step);
+  })(performance.now());
+}
+
+/* ════════════════ DIAL ════════════════ */
+const TICKS=60;
+function drawDial(){
+  const svg=document.getElementById('dialSvg');
+  svg.innerHTML='';
+  const cx=129,cy=129,r=116,h=7;
+  const pct=Math.min(1,state.today/state.goal);
+  const filled=Math.round(pct*TICKS);
+  const gold=state.today>=state.goal;
+  for(let i=0;i<TICKS;i++){
+    const a=(i/TICKS)*2*Math.PI-Math.PI/2;
+    const x1=cx+r*Math.cos(a),y1=cy+r*Math.sin(a);
+    const x2=cx+(r-h)*Math.cos(a),y2=cy+(r-h)*Math.sin(a);
+    const ln=document.createElementNS(NS,'line');
+    ln.setAttribute('x1',x1);ln.setAttribute('y1',y1);
+    ln.setAttribute('x2',x2);ln.setAttribute('y2',y2);
+    ln.setAttribute('stroke-width','2.2');
+    ln.className='tick'+(i<filled?(gold?' gold':' on'):'');
+    svg.appendChild(ln);
+  }
+  document.getElementById('dialCap').classList.toggle('gold',gold);
+  document.getElementById('goalLine').classList.toggle('done',gold);
+  if(gold)document.getElementById('goalLine').textContent='오늘 목표 달성 ✦';
+  else document.getElementById('goalLine').innerHTML='하루 목표 <b>1,000</b>';
+}
+
+const dialPulse=document.getElementById('dialPulse');
+const totalEl=document.getElementById('totalVal');
+const remainEl=document.getElementById('remainVal');
+
+function add(n,silent){
+  state.today+=n;state.total+=n;
+  localStorage.setItem(KEY_TODAY+todayKey,state.today);
+  localStorage.setItem(KEY_TOTAL,state.total);
+  dailyData[todayIso]=state.today;
+  saveDailyData();
+  setOdo(state.today);
+  drawDial();
+  drawMeter();
+  drawSpark();
+  renderCal();
+  totalEl.textContent=fmt(state.total);
+  const statTotalEl=document.getElementById('statTotal');
+  if(statTotalEl)statTotalEl.textContent=fmt(state.total);
+  if(!silent){
+    dialPulse.classList.remove('go');void dialPulse.offsetWidth;dialPulse.classList.add('go');
+    setCharMsg(pickTapMsg());
+    charPop();
+  }
+  if(state.total>=state.next)showCelebrate();
+}
+
+function drawMeter(){
+  const span=state.next-state.prev;
+  const pct=Math.min(100,(state.total-state.prev)/span*100);
+  document.getElementById('meterFill').style.width=pct+'%';
+  document.getElementById('meterMark').style.left=pct+'%';
+  const rem=state.total>=state.next?'달성':fmt(state.next-state.total)+'번';
+  remainEl.textContent=rem;
+  const sr=document.getElementById('statRemain');
+  if(sr)sr.textContent=rem;
+}
+
+/* long press */
+const dial=document.getElementById('dial');
+let holdT=null,holdSpeed=140;
+dial.addEventListener('pointerdown',()=>{
+  dial.classList.add('pressed');add(1);holdSpeed=140;
+  holdT=setTimeout(function rep(){
+    add(1,true);holdSpeed=Math.max(45,holdSpeed-9);holdT=setTimeout(rep,holdSpeed);
+  },420);
+});
+['pointerup','pointerleave','pointercancel'].forEach(ev=>
+  dial.addEventListener(ev,()=>{dial.classList.remove('pressed');clearTimeout(holdT);}));
+
+document.getElementById('a10').addEventListener('click',()=>add(10));
+document.getElementById('a100').addEventListener('click',()=>add(100));
+const directBox=document.getElementById('directBox'),ctl=document.getElementById('ctl');
+document.getElementById('aDirect').addEventListener('click',()=>{
+  ctl.style.display='none';directBox.classList.add('open');
+  document.getElementById('directVal').focus();
+});
+document.getElementById('directAdd').addEventListener('click',()=>{
+  const v=parseInt(document.getElementById('directVal').value,10);
+  if(v>0)add(v);
+  document.getElementById('directVal').value='';
+  directBox.classList.remove('open');ctl.style.display='flex';
+});
+
+/* ════════════════ SPARK ════════════════ */
+const sparkEl=document.getElementById('spark');
+
+function getDayValue(date){
+  return parseInt(dailyData[toISODate(date)]||0,10)||0;
+}
+function getMonthStats(y,m){
+  const days=new Date(y,m,0).getDate();
+  let sum=0,active=0,best=0,bestDay=0;
+  for(let d=1;d<=days;d++){
+    const key=`${y}-${pad2(m)}-${pad2(d)}`;
+    const v=parseInt(dailyData[key]||0,10)||0;
+    sum+=v;
+    if(v>0)active++;
+    if(v>best){best=v;bestDay=d;}
+  }
+  return {sum,active,avg:active?Math.round(sum/active):0,best,bestDay};
+}
+function getCurrentStreak(){
+  let streak=0;
+  for(let i=0;i<3650;i++){
+    if(getDayValue(getDateOffset(-i))>0)streak++;
+    else break;
+  }
+  return streak;
+}
+function drawSpark(){
+  const days=['일','월','화','수','목','금','토'];
+  const week=[];
+  for(let i=6;i>=0;i--){
+    const d=getDateOffset(-i);
+    week.push({d:i===0?'오늘':days[d.getDay()],v:getDayValue(d)});
+  }
+  const max=Math.max(...week.map(w=>w.v),state.goal,1);
+  sparkEl.innerHTML='';
+  let sum=0;
+  week.forEach((w,i)=>{
+    sum+=w.v;
+    const b=document.createElement('div');
+    b.className='bar'+(w.v>=state.goal?' hi':'')+(i===6?' today':'');
+    const h=Math.max(3,Math.round(w.v/max*38));
+    b.innerHTML=`<i style="height:${h}px"></i><span>${w.d}</span>`;
+    sparkEl.appendChild(b);
+  });
+  document.getElementById('weekSum').textContent='합계 '+fmt(sum);
+
+  const monthStats=getMonthStats(now.getFullYear(),now.getMonth()+1);
+  const inline=document.querySelectorAll('.inline-stats b.num');
+   const streak=getCurrentStreak();
+
+  if(inline[0])inline[0].textContent=fmt(monthStats.sum);
+  if(inline[1])inline[1].textContent=fmt(streak)+'일';
+  if(inline[2])inline[2].textContent=fmt(monthStats.best);
+
+  const homeStreak=document.getElementById('homeStreak');
+  if(homeStreak)homeStreak.textContent=fmt(streak)+'일 연속';
+}
+}
+
+/* ════════════════ CELEBRATE ════════════════ */
+function showCelebrate(){document.getElementById('celebrate').classList.add('show');}
+document.getElementById('celebClose').addEventListener('click',()=>{
+  document.getElementById('celebrate').classList.remove('show');
+  state.prev=25000;state.next=50000;
+  document.getElementById('meterFrom').textContent='25,000';
+  document.getElementById('meterTo').textContent='50,000';
+  document.getElementById('nextLabel').textContent='다음 — 두 번째 전환점';
+  drawMeter();
+});
+
+/* ════════════════ CALENDAR ════════════════ */
+let calCur={y:now.getFullYear(),m:now.getMonth()+1};
+const calGrid=document.getElementById('calGrid');
+
+function isCurrentMonth(y,m){
+  return y===now.getFullYear() && m===now.getMonth()+1;
+}
+function moveMonth(delta){
+  const d=new Date(calCur.y,calCur.m-1+delta,1);
+  calCur={y:d.getFullYear(),m:d.getMonth()+1};
+  renderCal();
+}
+function renderCal(){
+  const y=calCur.y,mo=calCur.m;
+  const first=new Date(y,mo-1,1).getDay();
+  const daysInMonth=new Date(y,mo,0).getDate();
+  const stats=getMonthStats(y,mo);
+
+  document.getElementById('calTitle').textContent=`${y}년 ${mo}월`;
+  document.getElementById('calPrev').disabled=false;
+  document.getElementById('calNext').disabled=isCurrentMonth(y,mo);
+  calGrid.innerHTML='';
+
+  for(let i=0;i<first;i++){
+    const b=document.createElement('div');
+    b.className='day blank';
+    calGrid.appendChild(b);
+  }
+  for(let d=1;d<=daysInMonth;d++){
+    const el=document.createElement('div');
+    el.className='day';
+    el.style.animationDelay=(d*8)+'ms';
+    const key=`${y}-${pad2(mo)}-${pad2(d)}`;
+    const v=parseInt(dailyData[key]||0,10)||0;
+    if(v)el.classList.add(v<=300?'l1':v<1000?'l2':'l3');
+    if(isCurrentMonth(y,mo) && d===now.getDate())el.classList.add('today');
+    el.innerHTML=`<span class="n num">${d}</span>`;
+    el.addEventListener('click',()=>selectDay(d));
+    calGrid.appendChild(el);
+  }
+
+  const bestText=stats.bestDay?`${mo}월 ${stats.bestDay}일 · ${fmt(stats.best)}`:'—';
+  document.getElementById('calRows').innerHTML=
+    `<div class="row"><span>이번 달 합계</span><b class="num">${fmt(stats.sum)}</b></div>`+
+    `<div class="row"><span>기록한 날 평균</span><b class="num">${fmt(stats.avg)}</b></div>`+
+    `<div class="row"><span>가장 깊었던 날</span><b class="num">${bestText}</b></div>`;
+
+  const selectedDay=isCurrentMonth(y,mo)?now.getDate():1;
+  selectDay(selectedDay);
+}
+function selectDay(d){
+  const y=calCur.y,mo=calCur.m;
+  const first=new Date(y,mo-1,1).getDay();
+  const key=`${y}-${pad2(mo)}-${pad2(d)}`;
+  const v=parseInt(dailyData[key]||0,10)||0;
+  calGrid.querySelectorAll('.day').forEach(el=>el.classList.remove('sel'));
+  calGrid.children[first+d-1]?.classList.add('sel');
+  document.getElementById('selDate').textContent=`${mo}월 ${d}일`+(isCurrentMonth(y,mo)&&d===now.getDate()?' · 오늘':'');
+  document.getElementById('selVal').innerHTML=fmt(v)+'<small>회</small>';
+}
+document.getElementById('calPrev').addEventListener('click',()=>moveMonth(-1));
+document.getElementById('calNext').addEventListener('click',()=>moveMonth(1));
+
+/* ════════════════ CHART ════════════════ */
+(function(){
+  const daily=[200,0,350,0,610,480,0,830,0,1020,760,0,540,0,910,0,1100,680,0,430,870,0,950,720,420,310,560,180,740,1250];
+  const base=state.total-daily.reduce((a,b)=>a+b,0);
+  let acc=base;const pts=daily.map(v=>(acc+=v));
+  const W=340,H=110,P=6;
+  const min=pts[0],max=pts[pts.length-1];
+  const X=i=>P+i/(pts.length-1)*(W-2*P);
+  const Y=v=>H-P-((v-min)/(max-min||1))*(H-2*P-8);
+  let d=`M ${X(0)} ${Y(pts[0])}`;
+  for(let i=1;i<pts.length;i++){
+    const x0=X(i-1),y0=Y(pts[i-1]),x1=X(i),y1=Y(pts[i]),cx=(x0+x1)/2;
+    d+=` C ${cx} ${y0}, ${cx} ${y1}, ${x1} ${y1}`;
+  }
+  const sc=document.getElementById('chartSvg');
+  const area=document.createElementNS(NS,'path');
+  area.setAttribute('d',d+` L ${X(pts.length-1)} ${H} L ${X(0)} ${H} Z`);
+  area.setAttribute('class','chart-area');
+  const line=document.createElementNS(NS,'path');
+  line.setAttribute('d',d);line.setAttribute('class','chart-line');
+  const dot=document.createElementNS(NS,'circle');
+  dot.setAttribute('cx',X(pts.length-1));dot.setAttribute('cy',Y(max));
+  dot.setAttribute('r','4');dot.setAttribute('class','chart-dot');
+  sc.appendChild(area);sc.appendChild(line);sc.appendChild(dot);
+  if(!reduced){
+    const len=line.getTotalLength();
+    line.style.strokeDasharray=len;line.style.strokeDashoffset=len;
+    line.getBoundingClientRect();
+    line.style.transition='stroke-dashoffset 1.2s cubic-bezier(.2,.9,.25,1)';
+    line.style.strokeDashoffset=0;
+  }
+})();
+
+/* ════════════════ JOURNEY ════════════════ */
+function animateJourney(){
+  const j=document.getElementById('journey');
+  const nodes=j.querySelectorAll('.jnode');
+  const last=j.querySelector('.jnode.now')||j.querySelector('.jnode.done:last-of-type');
+  if(!last)return;
+  const top=nodes[0].offsetTop+nodes[0].offsetHeight/2;
+  const end=last.offsetTop+last.offsetHeight/2;
+  document.getElementById('journeySeg').style.height=(end-top)+'px';
+}
+
+/* ════════════════ DATE ════════════════ */
+(function(){
+  const d=new Date();
+  const days=['일','월','화','수','목','금','토'];
+  document.getElementById('homeDate').textContent=
+    `${d.getMonth()+1}월 ${d.getDate()}일 ${days[d.getDay()]}요일`;
+})();
+
+/* ════════════════ START ════════════════ */
+buildOdo(fmt(state.today));
+setOdo(state.today);
+tween(totalEl,0,state.total,900);
+document.getElementById('statTotal').textContent=fmt(state.total);
+drawDial();drawMeter();drawSpark();renderCal();
+</script>
+
+<!-- images-base64.js 자동 적용 -->
+<script>
+(function(){
+  function applyImages(){
+    if(!window.GAMSA_IMAGES)return;
+    document.querySelectorAll('[data-gamsa-img]').forEach(function(el){
+      var idx=el.getAttribute('data-gamsa-img');
+      if(window.GAMSA_IMAGES[idx])el.src=window.GAMSA_IMAGES[idx];
+    });
+  }
+  if(window.GAMSA_IMAGES){applyImages();}
+  else{
+    window.addEventListener('load',applyImages);
+    setTimeout(applyImages,100);
+    setTimeout(applyImages,500);
+  }
+})();
+</script>
+
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('/service-worker.js');
+  });
+}
+</script>
+</body>
+</html>
