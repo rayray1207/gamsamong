@@ -447,7 +447,7 @@
 <!-- ══════ 통계 ══════ -->
 <section class="screen" id="stats">
   <div class="pad">
-    <div class="h1">여정<small>10만 번을 향한 일곱 개의 이정표</small></div>
+    <div class="h1">여정<small>감사가 쌓여가는 이정표</small></div>
     <div class="stat-hero">
       <div class="big num" id="statTotal">12,847</div>
       <div class="cap">지금까지 쌓은 감사 · 다음 이정표까지 <b class="num" id="statRemain">12,153번</b></div>
@@ -469,13 +469,14 @@
     <div class="section-head"><span class="ovl">이정표</span></div>
     <div class="journey" id="journey">
       <div class="seg" id="journeySeg"></div>
-      <div class="jnode done"><div class="nm">첫 감사의 씨앗<small>1번 달성</small></div><span class="st">DONE</span></div>
-      <div class="jnode done"><div class="nm">새싹이 돋다<small>1,000번 달성</small></div><span class="st">DONE</span></div>
-      <div class="jnode done"><div class="nm">뿌리가 내리다<small>5,000번 달성</small></div><span class="st">DONE</span></div>
-      <div class="jnode now"><div class="nm">잎이 펼쳐지다<small>25,000번 달성</small></div><span class="st">NOW</span></div>
-      <div class="jnode"><div class="nm">꽃이 피다<small>50,000번 달성</small></div><span class="st"></span></div>
-      <div class="jnode"><div class="nm">열매를 맺다<small>75,000번 달성</small></div><span class="st"></span></div>
-      <div class="jnode"><div class="nm">씨앗을 나누다<small>100,000번 달성</small></div><span class="st"></span></div>
+      <div class="jnode now"><div class="nm">첫 씨앗<small>1번 달성</small></div><span class="st">NOW</span></div>
+      <div class="jnode"><div class="nm">작은 변화<small>1,000번 달성</small></div><span class="st"></span></div>
+      <div class="jnode"><div class="nm">새로운 습관<small>5,000번 달성</small></div><span class="st"></span></div>
+      <div class="jnode"><div class="nm">마음의 전환점<small>25,000번 달성</small></div><span class="st"></span></div>
+      <div class="jnode"><div class="nm">새로운 시작<small>50,000번 달성</small></div><span class="st"></span></div>
+      <div class="jnode"><div class="nm">깊어진 감사<small>75,000번 달성</small></div><span class="st"></span></div>
+      <div class="jnode"><div class="nm">감사의 사람<small>100,000번 달성</small></div><span class="st"></span></div>
+      <div class="jnode"><div class="nm">끝없는 감사<small>100,000+ 계속</small></div><span class="st"></span></div>
     </div>
   </div>
 </section>
@@ -575,6 +576,7 @@ const fmt=n=>n.toLocaleString('ko-KR');
 const KEY_TODAY='gamsa-today-v3-';
 const KEY_TOTAL='gamsa-total-v3';
 const KEY_DAILY='gamsa-daily-v3';
+const KEY_CELEBRATED='gamsa-celebrated-v3';
 const now=new Date();
 const todayKey=now.toDateString();
 const todayIso=toISODate(now);
@@ -590,6 +592,16 @@ function saveDailyData(){
   localStorage.setItem(KEY_DAILY,JSON.stringify(dailyData));
 }
 
+const MILESTONES=[25000,50000,75000,100000];
+function loadCelebrated(){
+  try{return JSON.parse(localStorage.getItem(KEY_CELEBRATED)||'{}')||{};}
+  catch(e){return {};}
+}
+function saveCelebrated(){
+  localStorage.setItem(KEY_CELEBRATED,JSON.stringify(celebratedMilestones));
+}
+
+let celebratedMilestones=loadCelebrated();
 let dailyData=loadDailyData();
 const legacyToday=parseInt(localStorage.getItem(KEY_TODAY+todayKey)||0,10)||0;
 if(legacyToday>0 && !dailyData[todayIso]){
@@ -822,11 +834,21 @@ const totalEl=document.getElementById('totalVal');
 const remainEl=document.getElementById('remainVal');
 
 function add(n,silent){
-  state.today+=n;state.total+=n;
+  n=parseInt(n,10);
+  if(!Number.isFinite(n) || n<=0)return;
+
+  /* 직접입력 오타 방지: 한 번에 더할 수 있는 최대값 */
+  n=Math.min(n,100000);
+
+  const before=state.total;
+
+  state.today+=n;
+  state.total+=n;
   localStorage.setItem(KEY_TODAY+todayKey,state.today);
   localStorage.setItem(KEY_TOTAL,state.total);
   dailyData[todayIso]=state.today;
   saveDailyData();
+  updateMilestoneMeta();
   setOdo(state.today);
   drawDial();
   drawMeter();
@@ -842,16 +864,56 @@ function add(n,silent){
     setCharMsg(pickTapMsg());
     charPop();
   }
-  if(state.total>=state.next)showCelebrate();
+
+  const reached=MILESTONES.filter(m=>before<m && state.total>=m && !celebratedMilestones[m]).pop();
+  if(reached){
+    MILESTONES.filter(m=>before<m && state.total>=m).forEach(m=>celebratedMilestones[m]=true);
+    saveCelebrated();
+    showCelebrate(reached);
+  }
+}
+
+function updateMilestoneMeta(){
+  const label=document.getElementById('nextLabel');
+  const from=document.getElementById('meterFrom');
+  const to=document.getElementById('meterTo');
+
+  if(state.total<25000){
+    state.prev=0;state.next=25000;
+    if(label)label.textContent='다음 — 첫 번째 전환점';
+  }else if(state.total<50000){
+    state.prev=25000;state.next=50000;
+    if(label)label.textContent='다음 — 두 번째 전환점';
+  }else if(state.total<75000){
+    state.prev=50000;state.next=75000;
+    if(label)label.textContent='다음 — 세 번째 전환점';
+  }else if(state.total<100000){
+    state.prev=75000;state.next=100000;
+    if(label)label.textContent='다음 — 10만 번 달성';
+  }else{
+    state.prev=100000;state.next=null;
+    if(label)label.textContent='10만 이후 — 감사의 여정 계속';
+  }
+
+  if(from)from.textContent=fmt(state.prev);
+  if(to)to.textContent=state.next?fmt(state.next):'∞';
 }
 
 function drawMeter(){
-  const span=state.next-state.prev;
-  const pct=Math.min(100,(state.total-state.prev)/span*100);
+  updateMilestoneMeta();
+
+  let pct=100;
+  let rem='계속';
+  if(state.next){
+    const span=state.next-state.prev;
+    pct=Math.max(0,Math.min(100,(state.total-state.prev)/span*100));
+    rem=state.total>=state.next?'달성':fmt(state.next-state.total)+'번';
+  }
+
   document.getElementById('meterFill').style.width=pct+'%';
   document.getElementById('meterMark').style.left=pct+'%';
-  const rem=state.total>=state.next?'달성':fmt(state.next-state.total)+'번';
   remainEl.textContent=rem;
+
   const sr=document.getElementById('statRemain');
   if(sr)sr.textContent=rem;
 }
@@ -876,9 +938,10 @@ document.getElementById('aDirect').addEventListener('click',()=>{
   document.getElementById('directVal').focus();
 });
 document.getElementById('directAdd').addEventListener('click',()=>{
-  const v=parseInt(document.getElementById('directVal').value,10);
+  const input=document.getElementById('directVal');
+  const v=parseInt(input.value,10);
   if(v>0)add(v);
-  document.getElementById('directVal').value='';
+  input.value='';
   directBox.classList.remove('open');ctl.style.display='flex';
 });
 
@@ -942,13 +1005,29 @@ function drawSpark(){
 
 
 /* ════════════════ CELEBRATE ════════════════ */
-function showCelebrate(){document.getElementById('celebrate').classList.add('show');}
+function showCelebrate(n){
+  const titles={
+    25000:'첫 번째 전환점',
+    50000:'새로운 시작',
+    75000:'깊어진 감사',
+    100000:'감사의 사람'
+  };
+
+  const messages={
+    25000:'감사 2만 5천 번이 쌓였어요.<br>감사몽도 함께 자라고 있어요. 정말 대단해요.',
+    50000:'감사 5만 번을 넘겼어요.<br>새로운 시작을 맞이한 순간이에요.',
+    75000:'감사 7만 5천 번이 쌓였어요.<br>마음의 뿌리가 더 깊어지고 있어요.',
+    100000:'감사 10만 번을 달성했어요.<br>이제부터는 끝이 아니라, 더 넓은 감사의 여정이에요.'
+  };
+
+  document.querySelector('.sheet h2').textContent=titles[n]||'이정표 달성';
+  document.querySelector('.sheet .n').textContent=fmt(n);
+  document.querySelector('.sheet p').innerHTML=messages[n]||`감사 ${fmt(n)}번이 쌓였어요.<br>정말 대단해요.`;
+  document.getElementById('celebrate').classList.add('show');
+}
 document.getElementById('celebClose').addEventListener('click',()=>{
   document.getElementById('celebrate').classList.remove('show');
-  state.prev=25000;state.next=50000;
-  document.getElementById('meterFrom').textContent='25,000';
-  document.getElementById('meterTo').textContent='50,000';
-  document.getElementById('nextLabel').textContent='다음 — 두 번째 전환점';
+  updateMilestoneMeta();
   drawMeter();
 });
 
@@ -1063,13 +1142,24 @@ function drawChart(){
 function updateJourney(){
   const goals=[1,1000,5000,25000,50000,75000,100000];
   const nodes=document.querySelectorAll('#journey .jnode');
+  const endlessIndex=nodes.length-1;
 
   let nowIndex=goals.findIndex(g=>state.total<g);
-  if(nowIndex<0)nowIndex=goals.length-1;
+  if(nowIndex<0)nowIndex=endlessIndex;
 
   nodes.forEach((node,i)=>{
     const st=node.querySelector('.st');
     node.classList.remove('done','now');
+
+    if(i===endlessIndex){
+      if(state.total>=100000){
+        node.classList.add('now');
+        if(st)st.textContent='NOW';
+      }else{
+        if(st)st.textContent='';
+      }
+      return;
+    }
 
     if(state.total>=goals[i]){
       node.classList.add('done');
@@ -1109,7 +1199,7 @@ buildOdo(fmt(state.today));
 setOdo(state.today);
 tween(totalEl,0,state.total,900);
 document.getElementById('statTotal').textContent=fmt(state.total);
-drawDial();drawMeter();drawSpark();drawChart();updateJourney();renderCal();
+updateMilestoneMeta();drawDial();drawMeter();drawSpark();drawChart();updateJourney();renderCal();
 </script>
 
 <!-- images-base64.js 자동 적용 -->
