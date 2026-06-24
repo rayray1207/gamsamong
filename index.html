@@ -831,6 +831,8 @@ function add(n,silent){
   drawDial();
   drawMeter();
   drawSpark();
+  drawChart();
+  updateJourney();
   renderCal();
   totalEl.textContent=fmt(state.total);
   const statTotalEl=document.getElementById('statTotal');
@@ -1014,47 +1016,84 @@ document.getElementById('calPrev').addEventListener('click',()=>moveMonth(-1));
 document.getElementById('calNext').addEventListener('click',()=>moveMonth(1));
 
 /* ════════════════ CHART ════════════════ */
-(function(){
-  const daily=[200,0,350,0,610,480,0,830,0,1020,760,0,540,0,910,0,1100,680,0,430,870,0,950,720,420,310,560,180,740,1250];
+function drawChart(){
+  const daily=[];
+  for(let i=29;i>=0;i--){
+    daily.push(getDayValue(getDateOffset(-i)));
+  }
+
   const base=state.total-daily.reduce((a,b)=>a+b,0);
-  let acc=base;const pts=daily.map(v=>(acc+=v));
+  let acc=base;
+  const pts=daily.map(v=>(acc+=v));
+
   const W=340,H=110,P=6;
-  const min=pts[0],max=pts[pts.length-1];
+  const min=Math.min(...pts);
+  const max=Math.max(...pts);
   const X=i=>P+i/(pts.length-1)*(W-2*P);
   const Y=v=>H-P-((v-min)/(max-min||1))*(H-2*P-8);
+
   let d=`M ${X(0)} ${Y(pts[0])}`;
   for(let i=1;i<pts.length;i++){
     const x0=X(i-1),y0=Y(pts[i-1]),x1=X(i),y1=Y(pts[i]),cx=(x0+x1)/2;
     d+=` C ${cx} ${y0}, ${cx} ${y1}, ${x1} ${y1}`;
   }
+
   const sc=document.getElementById('chartSvg');
+  sc.querySelectorAll('.chart-area,.chart-line,.chart-dot').forEach(el=>el.remove());
+
   const area=document.createElementNS(NS,'path');
   area.setAttribute('d',d+` L ${X(pts.length-1)} ${H} L ${X(0)} ${H} Z`);
   area.setAttribute('class','chart-area');
-  const line=document.createElementNS(NS,'path');
-  line.setAttribute('d',d);line.setAttribute('class','chart-line');
-  const dot=document.createElementNS(NS,'circle');
-  dot.setAttribute('cx',X(pts.length-1));dot.setAttribute('cy',Y(max));
-  dot.setAttribute('r','4');dot.setAttribute('class','chart-dot');
-  sc.appendChild(area);sc.appendChild(line);sc.appendChild(dot);
-  if(!reduced){
-    const len=line.getTotalLength();
-    line.style.strokeDasharray=len;line.style.strokeDashoffset=len;
-    line.getBoundingClientRect();
-    line.style.transition='stroke-dashoffset 1.2s cubic-bezier(.2,.9,.25,1)';
-    line.style.strokeDashoffset=0;
-  }
-})();
 
+  const line=document.createElementNS(NS,'path');
+  line.setAttribute('d',d);
+  line.setAttribute('class','chart-line');
+
+  const dot=document.createElementNS(NS,'circle');
+  dot.setAttribute('cx',X(pts.length-1));
+  dot.setAttribute('cy',Y(pts[pts.length-1]));
+  dot.setAttribute('r','4');
+  dot.setAttribute('class','chart-dot');
+
+  sc.appendChild(area);
+  sc.appendChild(line);
+  sc.appendChild(dot);
+}
 /* ════════════════ JOURNEY ════════════════ */
+function updateJourney(){
+  const goals=[1,1000,5000,25000,50000,75000,100000];
+  const nodes=document.querySelectorAll('#journey .jnode');
+
+  let nowIndex=goals.findIndex(g=>state.total<g);
+  if(nowIndex<0)nowIndex=goals.length-1;
+
+  nodes.forEach((node,i)=>{
+    const st=node.querySelector('.st');
+    node.classList.remove('done','now');
+
+    if(state.total>=goals[i]){
+      node.classList.add('done');
+      if(st)st.textContent='DONE';
+    }else if(i===nowIndex){
+      node.classList.add('now');
+      if(st)st.textContent='NOW';
+    }else{
+      if(st)st.textContent='';
+    }
+  });
+}
+
 function animateJourney(){
+  updateJourney();
+
   const j=document.getElementById('journey');
   const nodes=j.querySelectorAll('.jnode');
   const last=j.querySelector('.jnode.now')||j.querySelector('.jnode.done:last-of-type');
   if(!last)return;
+
   const top=nodes[0].offsetTop+nodes[0].offsetHeight/2;
   const end=last.offsetTop+last.offsetHeight/2;
-  document.getElementById('journeySeg').style.height=(end-top)+'px';
+  document.getElementById('journeySeg').style.height=Math.max(0,end-top)+'px';
 }
 
 /* ════════════════ DATE ════════════════ */
@@ -1070,7 +1109,7 @@ buildOdo(fmt(state.today));
 setOdo(state.today);
 tween(totalEl,0,state.total,900);
 document.getElementById('statTotal').textContent=fmt(state.total);
-drawDial();drawMeter();drawSpark();renderCal();
+drawDial();drawMeter();drawSpark();renddrawDial();drawMeter();drawSpark();drawChart();updateJourney();renderCal();erCal();
 </script>
 
 <!-- images-base64.js 자동 적용 -->
