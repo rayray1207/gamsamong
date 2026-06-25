@@ -141,7 +141,7 @@
   .controls button:active{transform:scale(.94);background:#EDE9E1}
   .controls button.primary{background:var(--green);border-color:var(--green);color:#F3F1EA}
   .controls button.primary:active{background:#164137}
-  .direct{display:none;gap:9px;margin-bottom:28px}
+  .direct{display:none;gap:9px;margin-bottom:28px;flex-wrap:wrap}
   .direct.open{display:flex}
   .direct input{
     flex:1;font-family:inherit;font-size:16px;font-weight:600;
@@ -154,6 +154,19 @@
     border:none;border-radius:999px;padding:0 24px;
     background:var(--green);color:#F3F1EA;
   }
+  .direct .undo-btn{
+    flex:0 0 100%;
+    display:none;
+    margin-top:2px;
+    padding:9px 0;
+    background:transparent;
+    color:var(--mute);
+    border:1px solid transparent;
+    font-size:12px;
+    font-weight:600;
+  }
+  .direct .undo-btn.show{display:block}
+  .direct .undo-btn:active{background:#EDE9E1;color:var(--ink-2)}
 
   /* ─── DATA SECTIONS ─── */
   .section{border-top:1px solid var(--hair);padding-top:18px;margin-bottom:24px}
@@ -378,8 +391,9 @@
       <button id="aDirect">직접 입력</button>
     </div>
     <div class="direct" id="directBox">
-      <input type="number" inputmode="numeric" min="1" id="directVal" placeholder="횟수">
+      <input type="number" inputmode="numeric" min="1" max="10000" id="directVal" placeholder="횟수">
       <button id="directAdd">더하기</button>
+      <button id="undoLast" class="undo-btn" type="button">최근 입력 취소</button>
     </div>
 
     <div class="section">
@@ -577,6 +591,7 @@ const KEY_TODAY='gamsa-today-v3-';
 const KEY_TOTAL='gamsa-total-v3';
 const KEY_DAILY='gamsa-daily-v3';
 const KEY_CELEBRATED='gamsa-celebrated-v3';
+const KEY_LAST='gamsa-last-action-v3';
 const now=new Date();
 const todayKey=now.toDateString();
 const todayIso=toISODate(now);
@@ -600,8 +615,25 @@ function loadCelebrated(){
 function saveCelebrated(){
   localStorage.setItem(KEY_CELEBRATED,JSON.stringify(celebratedMilestones));
 }
+function loadLastAction(){
+  try{return JSON.parse(localStorage.getItem(KEY_LAST)||'null');}
+  catch(e){return null;}
+}
+function saveLastAction(action){
+  lastAction=action;
+  if(action)localStorage.setItem(KEY_LAST,JSON.stringify(action));
+  else localStorage.removeItem(KEY_LAST);
+  updateUndoButton();
+}
+function updateUndoButton(){
+  const btn=document.getElementById('undoLast');
+  if(!btn)return;
+  const ok=lastAction && lastAction.date===todayIso && lastAction.amount>0;
+  btn.classList.toggle('show',!!ok);
+}
 
 let celebratedMilestones=loadCelebrated();
+let lastAction=loadLastAction();
 let dailyData=loadDailyData();
 const legacyToday=parseInt(localStorage.getItem(KEY_TODAY+todayKey)||0,10)||0;
 if(legacyToday>0 && !dailyData[todayIso]){
@@ -848,6 +880,7 @@ function add(n,silent){
   localStorage.setItem(KEY_TOTAL,state.total);
   dailyData[todayIso]=state.today;
   saveDailyData();
+  saveLastAction({date:todayIso,amount:n});
   updateMilestoneMeta();
   setOdo(state.today);
   drawDial();
@@ -871,6 +904,46 @@ function add(n,silent){
     saveCelebrated();
     showCelebrate(reached);
   }
+}
+
+function undoLastAction(){
+  if(!lastAction || lastAction.date!==todayIso || !lastAction.amount)return;
+
+  const before=state.total;
+  const amount=Math.min(lastAction.amount,state.today,state.total);
+
+  state.today-=amount;
+  state.total-=amount;
+
+  if(state.today<=0){
+    state.today=0;
+    delete dailyData[todayIso];
+  }else{
+    dailyData[todayIso]=state.today;
+  }
+
+  localStorage.setItem(KEY_TODAY+todayKey,state.today);
+  localStorage.setItem(KEY_TOTAL,state.total);
+  saveDailyData();
+
+  MILESTONES.filter(m=>state.total<m && before>=m).forEach(m=>{
+    delete celebratedMilestones[m];
+  });
+  saveCelebrated();
+
+  saveLastAction(null);
+
+  updateMilestoneMeta();
+  setOdo(state.today);
+  drawDial();
+  drawMeter();
+  drawSpark();
+  drawChart();
+  updateJourney();
+  renderCal();
+  totalEl.textContent=fmt(state.total);
+  const statTotalEl=document.getElementById('statTotal');
+  if(statTotalEl)statTotalEl.textContent=fmt(state.total);
 }
 
 function updateMilestoneMeta(){
@@ -940,9 +1013,16 @@ document.getElementById('aDirect').addEventListener('click',()=>{
 document.getElementById('directAdd').addEventListener('click',()=>{
   const input=document.getElementById('directVal');
   const v=parseInt(input.value,10);
+  if(v>10000){
+    alert('한 번에 최대 10,000회까지 입력할 수 있습니다.');
+    return;
+  }
   if(v>0)add(v);
   input.value='';
   directBox.classList.remove('open');ctl.style.display='flex';
+});
+document.getElementById('undoLast').addEventListener('click',()=>{
+  undoLastAction();
 });
 
 /* ════════════════ SPARK ════════════════ */
@@ -1199,7 +1279,7 @@ buildOdo(fmt(state.today));
 setOdo(state.today);
 tween(totalEl,0,state.total,900);
 document.getElementById('statTotal').textContent=fmt(state.total);
-updateMilestoneMeta();drawDial();drawMeter();drawSpark();drawChart();updateJourney();renderCal();
+updateMilestoneMeta();drawDial();drawMeter();drawSpark();drawChart();updateJourney();renderCal();updateUndoButton();
 </script>
 
 <!-- images-base64.js 자동 적용 -->
