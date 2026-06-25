@@ -486,6 +486,7 @@
       <div class="jnode now"><div class="nm">첫 씨앗<small>1번 달성</small></div><span class="st">NOW</span></div>
       <div class="jnode"><div class="nm">작은 변화<small>1,000번 달성</small></div><span class="st"></span></div>
       <div class="jnode"><div class="nm">새로운 습관<small>5,000번 달성</small></div><span class="st"></span></div>
+      <div class="jnode"><div class="nm">감사의 확장<small>10,000번 달성</small></div><span class="st"></span></div>
       <div class="jnode"><div class="nm">마음의 전환점<small>25,000번 달성</small></div><span class="st"></span></div>
       <div class="jnode"><div class="nm">새로운 시작<small>50,000번 달성</small></div><span class="st"></span></div>
       <div class="jnode"><div class="nm">깊어진 감사<small>75,000번 달성</small></div><span class="st"></span></div>
@@ -563,6 +564,16 @@
   </div>
 </div>
 
+<!-- ══════ 입력 안내 시트 ══════ -->
+<div class="celebrate" id="inputNotice">
+  <div class="sheet">
+    <span class="ovl">NOTICE</span>
+    <h2>입력 범위 안내</h2>
+    <p>직접 입력은 한 번에 최대 10,000회까지 가능합니다.<br>실수 입력을 방지하기 위한 제한입니다.</p>
+    <button id="noticeClose">확인</button>
+  </div>
+</div>
+
 <!-- ══════ 탭바 ══════ -->
 <nav>
   <button class="on" data-screen="home">
@@ -607,7 +618,7 @@ function saveDailyData(){
   localStorage.setItem(KEY_DAILY,JSON.stringify(dailyData));
 }
 
-const MILESTONES=[25000,50000,75000,100000];
+const MILESTONES=[1,1000,5000,10000,25000,50000,75000,100000];
 function loadCelebrated(){
   try{return JSON.parse(localStorage.getItem(KEY_CELEBRATED)||'{}')||{};}
   catch(e){return {};}
@@ -951,18 +962,30 @@ function updateMilestoneMeta(){
   const from=document.getElementById('meterFrom');
   const to=document.getElementById('meterTo');
 
-  if(state.total<25000){
-    state.prev=0;state.next=25000;
-    if(label)label.textContent='다음 — 첫 번째 전환점';
+  if(state.total<1){
+    state.prev=0;state.next=1;
+    if(label)label.textContent='다음 — 첫 씨앗';
+  }else if(state.total<1000){
+    state.prev=1;state.next=1000;
+    if(label)label.textContent='다음 — 작은 변화';
+  }else if(state.total<5000){
+    state.prev=1000;state.next=5000;
+    if(label)label.textContent='다음 — 새로운 습관';
+  }else if(state.total<10000){
+    state.prev=5000;state.next=10000;
+    if(label)label.textContent='다음 — 감사의 확장';
+  }else if(state.total<25000){
+    state.prev=10000;state.next=25000;
+    if(label)label.textContent='다음 — 마음의 전환점';
   }else if(state.total<50000){
     state.prev=25000;state.next=50000;
-    if(label)label.textContent='다음 — 두 번째 전환점';
+    if(label)label.textContent='다음 — 새로운 시작';
   }else if(state.total<75000){
     state.prev=50000;state.next=75000;
-    if(label)label.textContent='다음 — 세 번째 전환점';
+    if(label)label.textContent='다음 — 깊어진 감사';
   }else if(state.total<100000){
     state.prev=75000;state.next=100000;
-    if(label)label.textContent='다음 — 10만 번 달성';
+    if(label)label.textContent='다음 — 감사의 사람';
   }else{
     state.prev=100000;state.next=null;
     if(label)label.textContent='10만 이후 — 감사의 여정 계속';
@@ -1014,7 +1037,7 @@ document.getElementById('directAdd').addEventListener('click',()=>{
   const input=document.getElementById('directVal');
   const v=parseInt(input.value,10);
   if(v>10000){
-    alert('한 번에 최대 10,000회까지 입력할 수 있습니다.');
+    showInputNotice();
     return;
   }
   if(v>0)add(v);
@@ -1087,28 +1110,43 @@ function drawSpark(){
 /* ════════════════ CELEBRATE ════════════════ */
 function showCelebrate(n){
   const titles={
-    25000:'첫 번째 전환점',
+    1:'첫 씨앗',
+    1000:'작은 변화',
+    5000:'새로운 습관',
+    10000:'감사의 확장',
+    25000:'마음의 전환점',
     50000:'새로운 시작',
     75000:'깊어진 감사',
     100000:'감사의 사람'
   };
 
   const messages={
-    25000:'감사 2만 5천 번이 쌓였어요.<br>감사몽도 함께 자라고 있어요. 정말 대단해요.',
-    50000:'감사 5만 번을 넘겼어요.<br>새로운 시작을 맞이한 순간이에요.',
-    75000:'감사 7만 5천 번이 쌓였어요.<br>마음의 뿌리가 더 깊어지고 있어요.',
-    100000:'감사 10만 번을 달성했어요.<br>이제부터는 끝이 아니라, 더 넓은 감사의 여정이에요.'
+    1:'첫 번째 감사가 기록되었어요.<br>오늘의 여정이 시작되었습니다.',
+    1000:'감사 1,000번이 쌓였어요.<br>작은 변화가 분명한 기록이 되었습니다.',
+    5000:'감사 5,000번이 쌓였어요.<br>반복이 새로운 습관으로 자리잡고 있습니다.',
+    10000:'감사 10,000번이 쌓였어요.<br>꾸준함이 단단한 흐름을 만들고 있습니다.',
+    25000:'감사 25,000번이 쌓였어요.<br>마음의 전환점에 도착했습니다.',
+    50000:'감사 50,000번을 넘겼어요.<br>새로운 시작을 맞이한 순간입니다.',
+    75000:'감사 75,000번이 쌓였어요.<br>감사의 깊이가 더 분명해지고 있습니다.',
+    100000:'감사 100,000번을 달성했어요.<br>이제부터는 더 넓은 감사의 여정이 이어집니다.'
   };
 
-  document.querySelector('.sheet h2').textContent=titles[n]||'이정표 달성';
-  document.querySelector('.sheet .n').textContent=fmt(n);
-  document.querySelector('.sheet p').innerHTML=messages[n]||`감사 ${fmt(n)}번이 쌓였어요.<br>정말 대단해요.`;
-  document.getElementById('celebrate').classList.add('show');
+  const sheet=document.getElementById('celebrate');
+  sheet.querySelector('.sheet h2').textContent=titles[n]||'이정표 달성';
+  sheet.querySelector('.sheet .n').textContent=fmt(n);
+  sheet.querySelector('.sheet p').innerHTML=messages[n]||`감사 ${fmt(n)}번이 쌓였어요.<br>정말 대단해요.`;
+  sheet.classList.add('show');
+}
+function showInputNotice(){
+  document.getElementById('inputNotice').classList.add('show');
 }
 document.getElementById('celebClose').addEventListener('click',()=>{
   document.getElementById('celebrate').classList.remove('show');
   updateMilestoneMeta();
   drawMeter();
+});
+document.getElementById('noticeClose').addEventListener('click',()=>{
+  document.getElementById('inputNotice').classList.remove('show');
 });
 
 /* ════════════════ CALENDAR ════════════════ */
@@ -1220,7 +1258,7 @@ function drawChart(){
 }
 /* ════════════════ JOURNEY ════════════════ */
 function updateJourney(){
-  const goals=[1,1000,5000,25000,50000,75000,100000];
+  const goals=[1,1000,5000,10000,25000,50000,75000,100000];
   const nodes=document.querySelectorAll('#journey .jnode');
   const endlessIndex=nodes.length-1;
 
