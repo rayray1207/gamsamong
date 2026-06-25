@@ -97,7 +97,7 @@
   .dial{
     position:relative;width:258px;height:258px;cursor:pointer;
     user-select:none;-webkit-user-select:none;
-    transition:transform .2s var(--ease-spring);touch-action:manipulation;
+    transition:transform .2s var(--ease-spring);touch-action:none;
   }
   .dial.pressed{transform:scale(.968)}
   .dial svg{width:100%;height:100%;display:block}
@@ -1023,7 +1023,8 @@ dial.addEventListener('pointerdown',()=>{
     add(1,true);holdSpeed=Math.max(45,holdSpeed-9);holdT=setTimeout(rep,holdSpeed);
   },420);
 });
-['pointerup','pointerleave','pointercancel'].forEach(ev=>
+dial.addEventListener('contextmenu', e => e.preventDefault());
+['pointerup','pointercancel'].forEach(ev=>
   dial.addEventListener(ev,()=>{dial.classList.remove('pressed');clearTimeout(holdT);}));
 
 document.getElementById('a10').addEventListener('click',()=>add(10));
